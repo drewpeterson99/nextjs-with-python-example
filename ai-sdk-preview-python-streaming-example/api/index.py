@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import List
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -12,7 +13,10 @@ from vercel import oidc
 from vercel.headers import set_headers
 
 
-load_dotenv(".env.local")
+# Load .env.local from project root (parent of api/ directory)
+project_root = Path(__file__).parent.parent.resolve()
+env_path = project_root / ".env.local"
+load_dotenv(env_path, override=True)
 
 app = FastAPI()
 
@@ -39,7 +43,11 @@ async def handle_chat_data(request: Request, protocol: str = Query('data')):
         client = OpenAI(api_key=api_key)
     else:
         # Production on Vercel: use OIDC token with AI Gateway
-        client = OpenAI(api_key=oidc.get_vercel_oidc_token(), base_url="https://ai-gateway.vercel.sh/v1")
+        try:
+            client = OpenAI(api_key=oidc.get_vercel_oidc_token(), base_url="https://ai-gateway.vercel.sh/v1")
+        except Exception as e:
+            # If OIDC fails, raise a more helpful error
+            raise RuntimeError(f"Failed to get API key. OPENAI_API_KEY not set and OIDC failed: {e}")
     response = StreamingResponse(
         stream_text(client, openai_messages, TOOL_DEFINITIONS, AVAILABLE_TOOLS, protocol),
         media_type="text/event-stream",

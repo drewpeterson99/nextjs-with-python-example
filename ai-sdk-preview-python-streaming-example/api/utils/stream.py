@@ -1,10 +1,11 @@
 import json
+import time
 import traceback
 import uuid
 from typing import Any, Callable, Dict, Mapping, Sequence
 
 from fastapi.responses import StreamingResponse
-from openai import OpenAI
+from openai import OpenAI, RateLimitError
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 
 
@@ -32,7 +33,7 @@ def stream_text(
 
         stream = client.chat.completions.create(
             messages=messages,
-            model="gpt-4o",
+            model="gpt-3.5-turbo",  # Temporarily using gpt-3.5-turbo for better rate limits on free tier
             stream=True,
             tools=tool_definitions,
         )
@@ -230,7 +231,30 @@ def stream_text(
             yield format_sse({"type": "finish"})
 
         yield "data: [DONE]\n\n"
-    except Exception:
+    except RateLimitError as e:
+        # Handle rate limit errors with a helpful message
+        error_msg = {
+            "type": "error",
+            "error": {
+                "message": "Rate limit exceeded. Please wait a moment and try again. If you're on a free tier, you may have hit your usage limits.",
+                "type": "rate_limit_error",
+                "code": 429
+            }
+        }
+        yield format_sse(error_msg)
+        yield "data: [DONE]\n\n"
+        traceback.print_exc()
+    except Exception as e:
+        # Handle other errors
+        error_msg = {
+            "type": "error",
+            "error": {
+                "message": str(e),
+                "type": type(e).__name__
+            }
+        }
+        yield format_sse(error_msg)
+        yield "data: [DONE]\n\n"
         traceback.print_exc()
         raise
 
