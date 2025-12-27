@@ -1,3 +1,4 @@
+import os
 from typing import List
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -31,7 +32,14 @@ async def handle_chat_data(request: Request, protocol: str = Query('data')):
     messages = request.messages
     openai_messages = convert_to_openai_messages(messages)
 
-    client = OpenAI(api_key=oidc.get_vercel_oidc_token(), base_url="https://ai-gateway.vercel.sh/v1")
+    # Use environment variable for local development, fall back to Vercel OIDC for production
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
+        # Local development: use OpenAI API directly
+        client = OpenAI(api_key=api_key)
+    else:
+        # Production on Vercel: use OIDC token with AI Gateway
+        client = OpenAI(api_key=oidc.get_vercel_oidc_token(), base_url="https://ai-gateway.vercel.sh/v1")
     response = StreamingResponse(
         stream_text(client, openai_messages, TOOL_DEFINITIONS, AVAILABLE_TOOLS, protocol),
         media_type="text/event-stream",
