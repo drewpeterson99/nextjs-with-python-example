@@ -28,7 +28,7 @@ import { Textarea } from "./ui/textarea";
 const suggestedActions = [
   {
     title: "What is the weather",
-    label: "in San Francisco? lol",
+    label: "in San Francisco?",
     action: "What is the weather in San Francisco?",
   },
   {
