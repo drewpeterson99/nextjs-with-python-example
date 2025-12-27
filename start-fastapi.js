@@ -1,7 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-const pythonPath = path.join(__dirname, 'venv', 'Scripts', 'python.exe');
+const pythonPath = path.join(__dirname, '.venv', 'Scripts', 'python.exe');
 const args = ['-m', 'uvicorn', 'api.index:app', '--reload', '--host', '127.0.0.1', '--port', '8000'];
 
 const child = spawn(pythonPath, args, {
